@@ -1,0 +1,12 @@
+[package]
+name = "translator"
+version = "0.1.0"
+authors = ["Jeremy Mill <jeremymill@gmail.com>"]
+
+[dependencies]
+syn = "0.12.12"
+quote = "0.3.15"
+proc-macro2 = "0.2.2"
+
+[lib]
+proc-macro = true
