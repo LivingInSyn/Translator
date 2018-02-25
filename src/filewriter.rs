@@ -3,9 +3,10 @@ use syn::{Ident};
 use std::io;
 use std::io::Write;
 use std::collections::HashMap;
+use std::fs;
 
 lazy_static! {
-static ref CSHARPMAP: HashMap<&'static str, &'static str> = {
+    static ref CSHARPMAP: HashMap<&'static str, &'static str> = {
         let mut m = HashMap::new();
         m.insert("bool", "byte");
         m.insert("c_char", "sbyte");
@@ -98,8 +99,13 @@ pub enum LanguageType {
     CSharp,
 }
 
+pub fn create_directory() -> io::Result<()>  {
+    fs::create_dir_all("./target/TranslateOutput")?;
+    Ok(())
+}
+
 ///Creates a file, writes the struct opening
-pub fn create_file(filename: &'static str, ltype: LanguageType, structname: Ident) -> io::Result<File> {
+pub fn create_file(filename: String, ltype: LanguageType, structname: Ident) -> io::Result<File> {
     let mut file = File::create(filename)?;
     //write the struct opening
     match ltype {
@@ -122,14 +128,14 @@ pub fn add_simple_type(file: &mut File, ltype: LanguageType, name: Ident, dtype:
     match ltype {
         LanguageType::CPP => {
             match CPPMAP.get(&dtype.as_ref()) {
-                Some(t) => write!(file, "\t\tpublic {} {};\n", t, name).unwrap(),
-                None => write!(file, "\t\tpublic {} {};\n", dtype, name).unwrap()
+                Some(t) => write!(file, "\t{} {};\n", t, name).unwrap(),
+                None => write!(file, "\t{} {};\n", dtype, name).unwrap()
             } 
         },
         LanguageType::Python => {
             match PYMAP.get(&dtype.as_ref()) {
-                Some(t) => write!(file, "\t\tpublic {} {};\n", t, name).unwrap(),
-                None => write!(file, "\t\tpublic {} {};\n", dtype, name).unwrap()
+                Some(t) => write!(file, "        (\"{}\", {}),\n", t, name).unwrap(),
+                None => write!(file, "        (\"{}\", {}),\n", dtype, name).unwrap()
             } 
         }
         LanguageType::CSharp => {
@@ -141,17 +147,56 @@ pub fn add_simple_type(file: &mut File, ltype: LanguageType, name: Ident, dtype:
     }
 }
 
-// ///adds an array type to the file
-// pub fn add_array(file: File, ltype: LanguageType, name: Ident, length: i64, dtype: Ident) {
-
-// }
+///adds an array type to the file
+pub fn add_array(file: &mut File, ltype: LanguageType, name: Ident, length: u64, dtype: Ident) {
+    match ltype {
+        LanguageType::CPP => {
+            match CPPMAP.get(&dtype.as_ref()) {
+                Some(t) => write!(file, "\t{} {}[{}];\n", t, name, length).unwrap(),
+                None => write!(file, "\t{} {}[{}];\n", dtype, name, length).unwrap()
+            } 
+        },
+        LanguageType::Python => {
+            match PYMAP.get(&dtype.as_ref()) {
+                Some(t) => write!(file, "        (\"{}\", {} * {}),\n", t, name, length).unwrap(),
+                None => write!(file, "        (\"{}\", {} * {}),\n", dtype, name, length).unwrap()
+            } 
+        }
+        LanguageType::CSharp => {
+            match CSHARPMAP.get(&dtype.as_ref()) {
+                Some(t) => {
+                    if t == &"string" {
+                        write!(file, "\t\t[MarshalAs(UnmanagedType.LPArray, ArraySubType=UnmanagedType.LPStr, SizeConst={})]\n", length);
+                    } else {
+                        write!(file, "\t\t[MarshalAs(UnmanagedType.ByValArray, SizeConst = {})]\n", length);
+                    }
+                    write!(file, "\t\tpublic {}[] {};\n", t, name).unwrap();
+                },
+                None => {
+                    write!(file, "\t\t[MarshalAs(UnmanagedType.ByValArray, SizeConst = {})]\n", length);
+                    write!(file, "\t\tpublic {}[] {};\n", dtype, name).unwrap();
+                }                    
+            }            
+        }
+    }
+}
 
 // ///adds a pointer type to the file
 // pub fn add_pointer(file: File, ltype: LanguageType, name: Ident) {
 //     //todo: add more args here
 // }
 
-// ///nicely closes the struct
-// pub fn close_struct(file: File, ltype: LanguageType) {
-//     //todo: add more args here
-// }
+///nicely closes the struct
+pub fn close_struct(file: &mut File, ltype: LanguageType, structname: Ident) {
+    match ltype {
+        LanguageType::CPP => {
+            write!(file, "}} {};\n\n", structname).unwrap();
+        },
+        LanguageType::CSharp => {
+            write!(file, "\t}}\n\n").unwrap();
+        },
+        LanguageType::Python => {
+            write!(file, "        ]\n\n").unwrap();
+        }
+    }
+}

@@ -8,7 +8,7 @@ extern crate lazy_static;
 
 use proc_macro::TokenStream;
 use proc_macro2::TokenNode;
-use syn::{Data, Type, Fields};//, Ident};
+use syn::{Data, Type, Fields, Expr};//, Ident};
 
 mod filewriter;
 use filewriter::*;
@@ -30,6 +30,22 @@ pub fn translate(input: TokenStream) -> TokenStream {
     let empty_tokens = quote!{
     };
     empty_tokens.parse().unwrap()
+}
+
+fn get_array_len(arr: syn::TypeArray) -> Option<u64> {
+    match arr.len {
+        Expr::Lit(l) => {
+            match l.lit {
+                syn::Lit::Int(int) => {
+                    Some(int.value())
+                }
+                _ => {
+                    None
+                }
+            }
+        },
+        _ => None
+    }
 }
 
 fn impl_translate(ast: syn::DeriveInput)  {
@@ -59,10 +75,12 @@ fn impl_translate(ast: syn::DeriveInput)  {
         //make sure we're matching a struct
         match ast.data {
             Data::Struct(ds) => {
-                //TODO: create the file
-                let mut cppfile = create_file("TestOut.h", LanguageType::CPP, ast.ident).unwrap();
-                let mut pyfile = create_file("TestOut.py", LanguageType::Python, ast.ident).unwrap();
-                let mut csfile = create_file("TestOut.cs", LanguageType::CSharp, ast.ident).unwrap();
+                //TODO: create the directory
+                let _ = create_directory();
+                //create the files
+                let mut cppfile = create_file(format!("./target/TranslateOutput/{}.h", ast.ident), LanguageType::CPP, ast.ident).unwrap();
+                let mut pyfile = create_file(format!("./target/TranslateOutput/{}.py", ast.ident), LanguageType::Python, ast.ident).unwrap();
+                let mut csfile = create_file(format!("./target/TranslateOutput/{}.cs", ast.ident), LanguageType::CSharp, ast.ident).unwrap();
                 //make sure we're matching named fields 
                 match ds.fields {
                     Fields::Named(fieldsnamed) => {
@@ -76,8 +94,38 @@ fn impl_translate(ast: syn::DeriveInput)  {
                             //field.ty is Enum syn::Type (https://dtolnay.github.io/syn/syn/enum.Type.html)
                             match field.ty {
                                 //array
-                                Type::Array(_array) => {
-                                    println!("{} is an array", field.ident.unwrap())
+                                Type::Array(array) => {
+                                    println!("{} is an array", field.ident.unwrap());
+                                    //check the len type
+                                    match get_array_len(array.clone()) {
+                                        Some(len) => {
+                                            println!("length val is: {}", len);
+                                            match *array.elem {
+                                                //scaffold handling 2d arrays
+                                                Type::Array(_a) => {
+                                                  println!("2d arrays not currently supported");  
+                                                },
+                                                //an array of pointers
+                                                //TODO: update to n-pointers later, right now only handle single pointers
+                                                Type::Ptr(p) => {
+                                                    
+                                                },
+                                                Type::Path(p) => {
+                                                    add_array(&mut cppfile, LanguageType::CPP, 
+                                                                field.ident.unwrap(), len,
+                                                                p.path.segments.iter().last().unwrap().ident);
+                                                    add_array(&mut csfile, LanguageType::CSharp, 
+                                                                field.ident.unwrap(), len,
+                                                                p.path.segments.iter().last().unwrap().ident);
+                                                    add_array(&mut pyfile, LanguageType::Python, 
+                                                                field.ident.unwrap(), len,
+                                                                p.path.segments.iter().last().unwrap().ident);
+                                                },
+                                                _ => {}
+                                            }
+                                        },
+                                        None => println!("Non integer length")
+                                    };
                                 },
                                 //pointer
                                 Type::Ptr(ptr) => {
@@ -133,6 +181,10 @@ fn impl_translate(ast: syn::DeriveInput)  {
                     syn::Fields::Unnamed(_) => {println!("unnamed")},
                     syn::Fields::Unit => {println!("unit")}
                 }
+                //close the struct
+                close_struct(&mut cppfile, LanguageType::CPP, ast.ident);
+                close_struct(&mut pyfile, LanguageType::Python, ast.ident);
+                close_struct(&mut csfile, LanguageType::CSharp, ast.ident);
             },
         _ => {}
         }
