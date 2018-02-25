@@ -7,6 +7,7 @@ authors = ["Jeremy Mill <jeremymill@gmail.com>"]
 syn = "0.12.12"
 quote = "0.3.15"
 proc-macro2 = "0.2.2"
+lazy_static = "1.0"
 
 [lib]
 proc-macro = true

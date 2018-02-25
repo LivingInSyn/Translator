@@ -3,10 +3,16 @@ extern crate proc_macro2;
 extern crate syn;
 #[macro_use]
 extern crate quote;
+#[macro_use]
+extern crate lazy_static;
 
 use proc_macro::TokenStream;
 use proc_macro2::TokenNode;
-use syn::{Data, Type, Fields};
+use syn::{Data, Type, Fields};//, Ident};
+
+mod filewriter;
+use filewriter::*;
+
 
 #[proc_macro_derive(Translate)]
 pub fn translate(input: TokenStream) -> TokenStream {
@@ -18,13 +24,15 @@ pub fn translate(input: TokenStream) -> TokenStream {
     let ast = syn::parse(input).unwrap();
 
     // Build the impl
-    let gen = impl_translate(ast);
+    impl_translate(ast);
     
-    // Return the generated impl
-    gen.parse().unwrap()
+    //return empty tokenstream
+    let empty_tokens = quote!{
+    };
+    empty_tokens.parse().unwrap()
 }
 
-fn impl_translate(ast: syn::DeriveInput) -> quote::Tokens {
+fn impl_translate(ast: syn::DeriveInput)  {
     // let name = ast.ident;
     
     println!("name is: {}", ast.ident);
@@ -47,11 +55,14 @@ fn impl_translate(ast: syn::DeriveInput) -> quote::Tokens {
             };
         }
     }
-    //if it is repc, lets try and translate it
     if is_reprc {
         //make sure we're matching a struct
         match ast.data {
             Data::Struct(ds) => {
+                //TODO: create the file
+                let mut cppfile = create_file("TestOut.h", LanguageType::CPP, ast.ident).unwrap();
+                let mut pyfile = create_file("TestOut.py", LanguageType::Python, ast.ident).unwrap();
+                let mut csfile = create_file("TestOut.cs", LanguageType::CSharp, ast.ident).unwrap();
                 //make sure we're matching named fields 
                 match ds.fields {
                     Fields::Named(fieldsnamed) => {
@@ -64,15 +75,38 @@ fn impl_translate(ast: syn::DeriveInput) -> quote::Tokens {
                             //now we can find the type of the field
                             //field.ty is Enum syn::Type (https://dtolnay.github.io/syn/syn/enum.Type.html)
                             match field.ty {
-                                Type::Array(_array) => {println!("{} is an array", field.ident.unwrap())},
-                                Type::Ptr(_ptr) => {println!("{} is a ptr", field.ident.unwrap())},
+                                //array
+                                Type::Array(_array) => {
+                                    println!("{} is an array", field.ident.unwrap())
+                                },
+                                //pointer
+                                Type::Ptr(ptr) => {
+                                    println!("{} is a ptr", field.ident.unwrap());
+                                    //get the type of the pointer
+                                    let fp_path = match *ptr.elem {
+                                        Type::Array(array) => {
+                                            // //TODO: fix this
+                                            //write an array pointer to the file
+                                        },
+                                        Type::Ptr(ptr) => {
+                                            //TODO: add a pointer to a file
+                                        },
+                                        Type::Path(path) => {
+                                            //recursive?
+                                        },
+                                        _ => {println!("not supported")}
+                                    };
+                                },
                                 //aparently fields like u16, i32, etc. are paths to their type
                                 Type::Path(typepath)=> {
-                                    println!("{} is a path type", field.ident.unwrap());
                                     //get the last Punctuated<PathSegment, Colon2> from 
                                     //typepath.path.segments
                                     let segment = typepath.path.segments.iter().last().unwrap();
                                     println!("type is: {}", segment.ident);
+                                    println!("name is: {}", field.ident.unwrap());
+                                    add_simple_type(&mut cppfile, LanguageType::CPP, field.ident.unwrap(), segment.ident);
+                                    add_simple_type(&mut csfile, LanguageType::Python, field.ident.unwrap(), segment.ident);
+                                    add_simple_type(&mut pyfile, LanguageType::CSharp, field.ident.unwrap(), segment.ident);
                                 },
                                                               
                                 /* I'm not going to support these types yet */
@@ -103,9 +137,7 @@ fn impl_translate(ast: syn::DeriveInput) -> quote::Tokens {
         _ => {}
         }
     }
-    //empty quote! macro generates an empty quote::Tokens to return
-    quote! {
-    }
+    
 }
 
 #[cfg(test)]
