@@ -7,10 +7,32 @@ Translator is a rust procedural macro which translates rust structs into other l
 
 This macro isn't a magic bullet, but it will (hopefully) greatly reduce the cost of creating Rust libraries for use with other languages
 
-## Sample
+## Use
 ### Input
-This rust input:
+Say you want to translate the following structs:
 ```rust
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct SomeStruct {
+    //pub raw_message: [i16;5],
+    pub foo: i32,
+    pub bar: Baz,
+    pub foobar: [u8;5]
+}
+
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct Baz {
+    pub bob: f32
+}
+```
+
+You would have to add the Translator macro, and the ```Translator``` to the derivations. You would also have to add the 'magic struct' to the end of the struct declarations. It would look like this:
+
+```rust
+#[macro_use]
+extern crate translator;
+
 #[repr(C)]
 #[derive(Clone, Copy, Translate)]
 pub struct SomeStruct {
@@ -25,9 +47,12 @@ pub struct SomeStruct {
 pub struct Baz {
     pub bob: f32
 }
+
+#[derive(Translate)]
+struct __FinalizeTranslatorStruct__{}
 ```
 
-Would be translated into:
+When you compile, in the 'target' folder a new folder will be created named 'TranslateOutput' with 3 files (one for each language) with the following contents:
 
 ### c++
 ```c++
