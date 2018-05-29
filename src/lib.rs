@@ -41,7 +41,7 @@ lazy_static! {
         write!(file, "using System.Linq;\n").unwrap();
         write!(file, "using System.Runtime.InteropServices;\n\n").unwrap();
         //c# namespace def
-        write!(file, "namespace {}\n{{", *en).unwrap();
+        write!(file, "namespace {}\n{{\n", *en).unwrap();
 
         Mutex::new(file)
     };
