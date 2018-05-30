@@ -40,6 +40,11 @@ impl SomeStruct {
     }
 }
 
+#[derive(Translate)]
+pub struct DontTranslateMe {
+    pub dontfindme: i32,
+}
+
 
 
 
@@ -119,6 +124,37 @@ mod tests {
     #[test]
     fn check_python_headers() {
         //There are currently no python headers
+    }
+    //****Non-translated-struct-test***
+    fn check_python_notrans(){
+        let mut f = File::open(PYFILE).unwrap();
+        let mut buffer = String::new();
+        f.read_to_string(&mut buffer).unwrap();
+        //split string into newlines
+        let lines: Vec<&str> = buffer.split("\n").collect();
+
+        assert_eq!(lines.contains(&"class DontTranslateMe(Structure):"), false);
+    }
+    fn check_cpp_notrans(){
+        let mut f = File::open(CPPFILE).unwrap();
+        let mut buffer = String::new();
+        f.read_to_string(&mut buffer).unwrap();
+        //split string into newlines
+        let lines: Vec<&str> = buffer.split("\n").collect();
+        /*
+        */
+        assert_eq!(lines.contains(&"typedef struct DontTranslateMeTag {"), false);
+    }
+    fn check_csharp_notrans(){
+        let mut f = File::open(CSHARPFILE).unwrap();
+        let mut buffer = String::new();
+        f.read_to_string(&mut buffer).unwrap();
+        //split string into newlines
+        let lines: Vec<&str> = buffer.split("\n").collect();
+        /*
+        */
+        //check the struct decls
+        assert_eq!(lines.contains(&"\tpublic struct DontTranslateMe"), false);
     }
     //****PYTHON TESTS****
     #[test]
