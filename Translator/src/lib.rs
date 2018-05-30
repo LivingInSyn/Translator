@@ -1,3 +1,10 @@
+//! Translator
+//! ================================
+//! Translator is a procedural macro for translating rust structs that are repr-C
+//! to C#, Python, and C++ at compile time. It is useful in writing rust libraries
+//! which are exposed via an FFI.
+
+
 extern crate proc_macro;
 extern crate proc_macro2;
 extern crate syn;
@@ -52,6 +59,7 @@ lazy_static! {
     };
 }
 
+///translate is the implementation of the macro. It will ALWAYS return an empty TokenStream
 #[proc_macro_derive(Translate)]
 pub fn translate(input: TokenStream) -> TokenStream {
     // Construct a string representation of the type definition
