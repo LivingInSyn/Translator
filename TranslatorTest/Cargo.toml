@@ -1,0 +1,7 @@
+[package]
+name = "translator_test"
+version = "0.1.0"
+authors = ["Jeremy Mill <jeremy.mill@otis.com>"]
+
+[dependencies]
+translator = { path = "..\\Translator" }
