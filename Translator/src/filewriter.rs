@@ -47,7 +47,7 @@ lazy_static! {
         m.insert("c_ushort", "unsigned short");
         m.insert("i16", "short");
         m.insert("c_short", "short");
-        m.insert("c_void", "void*");
+        m.insert("c_void", "void");
         m.insert("u32", "unsigned int");
         m.insert("c_uint", "unsigned int");
         m.insert("i32", "int");
