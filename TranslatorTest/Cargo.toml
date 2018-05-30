@@ -5,3 +5,4 @@ authors = ["Jeremy Mill <jeremy.mill@otis.com>"]
 
 [dependencies]
 translator = { path = "..\\Translator" }
+libc = "0.2.30"

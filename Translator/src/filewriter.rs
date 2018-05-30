@@ -199,7 +199,7 @@ pub fn add_pointer(file: &mut File, ltype: LanguageType, name: Ident, dtype: Ide
             let mut pyused = PY_USED_TYPES.lock().unwrap();
             match PYMAP.get(&dtype_lookup_val.as_ref()) {
                 Some(t) => {
-                    if dtype_lookup_val != "c_char_pntr" {
+                    if dtype_lookup_val != "c_char_pntr" && dtype_lookup_val != "c_void" {
                         write!(file, "        (\"{}\", POINTER({})),\n", name, t).unwrap();
                         usedpntr = true;
                     } else {
@@ -257,7 +257,7 @@ pub fn start_struct(file: &mut File, ltype: LanguageType, structname: Ident) {
         },
         LanguageType::Python => {
             write!(file, "class {}(Structure):\n", structname).unwrap();
-            write!(file, "        _fields_ = [\n").unwrap();
+            write!(file, "    _fields_ = [\n").unwrap();
         }
     }
 }

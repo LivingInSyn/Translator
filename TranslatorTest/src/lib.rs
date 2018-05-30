@@ -1,37 +1,44 @@
 #[macro_use]
 extern crate translator;
+extern crate libc;
 
 use std::os::raw::c_char;
+use libc::c_void;
 use std::ptr;
 
+#[repr(C)]
+#[derive(Translate)]
+pub struct Baz {
+    pub bob: f32,
+    pub void_pntr: *mut c_void,
+}
 
 #[repr(C)]
-#[derive(Clone, Copy, Translate)]
+#[derive(Translate)]
 pub struct SomeStruct {
     //pub raw_message: [i16;5],
     pub foo: i32,
     pub bar: Baz,
+    pub baz_pntr: *const Baz,
     pub foobar: [u8;5],
-    pub test_c_char: *mut c_char
+    pub test_c_char: *mut c_char,
 }
 impl SomeStruct {
     pub fn new() -> SomeStruct {
         SomeStruct {
             foo: 1,
             bar: Baz {
-                bob: 2f32
+                bob: 2f32,
+                void_pntr: ptr::null_mut(),
             },
+            baz_pntr: ptr::null(),
             foobar: [0;5],
             test_c_char: ptr::null_mut()
         }
     }
 }
 
-#[repr(C)]
-#[derive(Clone, Copy, Translate)]
-pub struct Baz {
-    pub bob: f32
-}
+
 
 
 #[derive(Translate)]
@@ -111,5 +118,7 @@ mod tests {
     fn check_python_headers() {
         //There are currently no python headers
     }
+
+    
 
 }
