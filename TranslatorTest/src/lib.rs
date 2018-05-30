@@ -45,6 +45,11 @@ pub struct DontTranslateMe {
     pub dontfindme: i32,
 }
 
+#[no_mangle]
+#[allow(non_snake_case)]
+pub extern fn GetSomeStruct() -> SomeStruct {
+    SomeStruct::new()
+}
 
 
 
