@@ -57,9 +57,9 @@ When you compile, in the 'target' folder a new folder will be created named 'Tra
 ### c++
 ```c++
 typedef struct SomeStructTag {
-	int foo;
+	int32_t foo;
 	Baz bar;
-	unsigned char foobar[5];
+	uint8_t foobar[5];
 } SomeStruct;
 
 typedef struct BazTag {
