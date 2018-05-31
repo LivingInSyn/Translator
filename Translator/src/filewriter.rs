@@ -28,6 +28,7 @@ lazy_static! {
         m.insert("f32", "float");
         m.insert("c_float", "float");
         m.insert("i64", "long");
+        m.insert("u64", "ulong");
         m.insert("c_long", "long");
         m.insert("c_longlong", "long");
         m.insert("c_double", "double");
@@ -39,22 +40,23 @@ lazy_static! {
         m.insert("bool", "bool");
         m.insert("c_char", "signed char");
         m.insert("c_char_pntr", "char");
-        m.insert("i8", "signed char");
+        m.insert("i8", "int8_t");
         m.insert("c_schar", "signed char");
-        m.insert("u8", "unsigned char");
+        m.insert("u8", "uint8_t");
         m.insert("c_uchar", "unsigned char");
-        m.insert("u16", "unsigned short");
+        m.insert("u16", "uint16_t");
         m.insert("c_ushort", "unsigned short");
-        m.insert("i16", "short");
+        m.insert("i16", "int16_t");
         m.insert("c_short", "short");
         m.insert("c_void", "void");
-        m.insert("u32", "unsigned int");
+        m.insert("u32", "uint32_t");
         m.insert("c_uint", "unsigned int");
-        m.insert("i32", "int");
+        m.insert("i32", "int32_t");
         m.insert("c_int", "int");
         m.insert("f32", "float");
         m.insert("c_float", "float");
-        m.insert("i64", "long long int");
+        m.insert("i64", "int64_t");
+        m.insert("u64", "uint64_t");
         m.insert("c_long", "long long int");
         m.insert("c_longlong", "long long int");
         m.insert("c_ulong", "unsigned long long int");
@@ -84,6 +86,7 @@ lazy_static! {
         m.insert("f32", "c_float");
         m.insert("c_float", "c_float");
         m.insert("i64", "c_longlong");
+        m.insert("u64", "c_ulonglong");
         m.insert("c_long", "c_longlong");
         m.insert("c_longlong", "c_longlong");
         m.insert("c_ulong", "c_ulonglong");
@@ -112,6 +115,9 @@ pub fn create_directory() -> io::Result<()>  {
 
 ///adds a simple type like i32 or other struct to the file
 pub fn add_simple_type(file: &mut File, ltype: LanguageType, name: Ident, dtype: Ident) {
+    if dtype.to_string() == "i128" || dtype.to_string() == "u128" {
+        panic!("There is no mapping for 128 bit integer types");
+    }
     match ltype {
         LanguageType::CPP => {
             match CPPMAP.get(&dtype.as_ref()) {
@@ -142,6 +148,9 @@ pub fn add_simple_type(file: &mut File, ltype: LanguageType, name: Ident, dtype:
 
 ///adds an array type to the file
 pub fn add_array(file: &mut File, ltype: LanguageType, name: Ident, length: u64, dtype: Ident) {
+    if dtype.to_string() == "i128" || dtype.to_string() == "u128" {
+        panic!("There is no mapping for 128 bit integer types");
+    }
     match ltype {
         LanguageType::CPP => {
             match CPPMAP.get(&dtype.as_ref()) {
@@ -181,9 +190,12 @@ pub fn add_array(file: &mut File, ltype: LanguageType, name: Ident, length: u64,
 }
 
 ///adds a pointer type to the file
-pub fn add_pointer(file: &mut File, ltype: LanguageType, name: Ident, dtype: Ident) {
-    //change dtype to _pntr, to see if we have that
-    let mut dtype_lookup_val = dtype.to_string();    
+pub fn add_pointer(file: &mut File, ltype: LanguageType, name: Ident, dtype: Ident) {    
+    let mut dtype_lookup_val = dtype.to_string();
+    if dtype_lookup_val == "i128" || dtype_lookup_val == "u128" {
+        panic!("There is no mapping for 128 bit integer types");
+    }
+    //change dtype to _pntr if it's a c_char
     if dtype.to_string() == "c_char" {        
         dtype_lookup_val.push_str("_pntr");
     }

@@ -131,6 +131,7 @@ mod tests {
         //There are currently no python headers
     }
     //****Non-translated-struct-test***
+    #[test]
     fn check_python_notrans(){
         let mut f = File::open(PYFILE).unwrap();
         let mut buffer = String::new();
@@ -140,6 +141,7 @@ mod tests {
 
         assert_eq!(lines.contains(&"class DontTranslateMe(Structure):"), false);
     }
+    #[test]
     fn check_cpp_notrans(){
         let mut f = File::open(CPPFILE).unwrap();
         let mut buffer = String::new();
@@ -150,6 +152,7 @@ mod tests {
         */
         assert_eq!(lines.contains(&"typedef struct DontTranslateMeTag {"), false);
     }
+    #[test]
     fn check_csharp_notrans(){
         let mut f = File::open(CSHARPFILE).unwrap();
         let mut buffer = String::new();
@@ -368,7 +371,7 @@ mod tests {
         /*
         */
         assert_eq!(lines.contains(&"\tfloat bob;"), true);
-        assert_eq!(lines.contains(&"\tint foo;"), true);
+        assert_eq!(lines.contains(&"\tint32_t foo;"), true);
     }
     #[test]
     fn check_cpp_arrays(){
@@ -379,7 +382,7 @@ mod tests {
         let lines: Vec<&str> = buffer.split("\n").collect();
         /*
         */
-        assert_eq!(lines.contains(&"\tunsigned char foobar[5];"), true);
+        assert_eq!(lines.contains(&"\tuint8_t foobar[5];"), true);
     }
     #[test]
     fn check_cpp_basic_strings(){
