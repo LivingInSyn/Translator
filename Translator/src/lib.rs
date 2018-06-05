@@ -140,136 +140,130 @@ fn impl_translate(ast: syn::DeriveInput)  {
             };
         }
     }
-    //if it's not repr c, all we're going to do is check if it's the magic struct
-    if !is_reprc {
-        check_magic_struct(&ast.ident);
+    //if it's the magic struct, or isn't reprc, return
+    if check_magic_struct(&ast.ident) || !is_reprc {
+        return;
     }
-    else {
-        if let Data::Struct(ds) = ast.data {
-            //check if it's the magic struct (close files)
-            if check_magic_struct(&ast.ident) {
-                return;
-            }
-            //TODO: create the directory
-            let _ = create_directory();
-            //create the files/unlock them if already made (lazy static initilization)
-            let mut cppfile = CPPFILE.lock().unwrap();
-            let mut pyfile = PYFILE.lock().unwrap();
-            let mut csfile = CSFILE.lock().unwrap();
-            //start the struct
-            start_struct(&mut *cppfile, LanguageType::CPP, ast.ident);
-            start_struct(&mut *pyfile, LanguageType::Python, ast.ident);
-            start_struct(&mut *csfile, LanguageType::CSharp, ast.ident);
+    if let Data::Struct(ds) = ast.data {
+        //create the directory
+        let _ = create_directory();
+        //create the files/unlock them if already made (lazy static initilization)
+        let mut cppfile = CPPFILE.lock().unwrap();
+        let mut pyfile = PYFILE.lock().unwrap();
+        let mut csfile = CSFILE.lock().unwrap();
+        //start the struct
+        start_struct(&mut *cppfile, LanguageType::CPP, ast.ident);
+        start_struct(&mut *pyfile, LanguageType::Python, ast.ident);
+        start_struct(&mut *csfile, LanguageType::CSharp, ast.ident);
 
-            //make sure we're matching named fields
-            if let Fields::Named(fieldsnamed) = ds.fields {
-                //foreach field  (https://dtolnay.github.io/syn/syn/struct.Field.html)
-                for field in fieldsnamed.named {
-                    //fieldsnamed.named is of type Puncatuated<Field, Comma>
-                    //field is type syn::Field. field.ident is Option<ident>, so we can print it,
-                    //or save it for future use (like translating a struct :))                            
-                    //println!("field: {}", field.ident.unwrap());
-                    //now we can find the type of the field
-                    //field.ty is Enum syn::Type (https://dtolnay.github.io/syn/syn/enum.Type.html)
-                    match field.ty {
-                        //array
-                        Type::Array(array) => {
-                            //println!("{} is an array", field.ident.unwrap());
-                            //check the len type
-                            if let Some(len) = get_array_len(array.clone()) {
-                                //println!("length val is: {}", len);
-                                match *array.elem {
-                                    //scaffold handling 2d arrays
-                                    Type::Array(_a) => {
-                                        //todo: support 2d arrays
-                                        panic!("2+D Arrays not currently implemented")
-                                    },
-                                    //an array of pointers
-                                    //TODO: update to n-pointers later, right now only handle single pointers
-                                    Type::Ptr(_p) => {
-                                        //todo: support array of pointers
-                                        panic!("Pointer Arrays not currently implemented")
-                                    },
-                                    Type::Path(p) => {
-                                        //println!("array name is {}", field.ident.unwrap());
-                                        //println!("array type is: {}", p.path.segments.iter().last().unwrap().ident);
-                                        add_array(&mut cppfile, LanguageType::CPP, 
-                                                    field.ident.unwrap(), len,
-                                                    p.path.segments.iter().last().unwrap().ident);
-                                        add_array(&mut csfile, LanguageType::CSharp, 
-                                                    field.ident.unwrap(), len,
-                                                    p.path.segments.iter().last().unwrap().ident);
-                                        add_array(&mut pyfile, LanguageType::Python, 
-                                                    field.ident.unwrap(), len,
-                                                    p.path.segments.iter().last().unwrap().ident);
-                                    },
-                                    _ => {}
-                                }
-                            }
-                        },
-                        //pointer
-                        Type::Ptr(ptr) => {
-                            //println!("{} is a ptr", field.ident.unwrap());
-                            //get the type of the pointer
-                            match *ptr.elem {
-                                Type::Array(_array) => {
-                                    //todo: support pointer to an array
-                                    panic!("pointer to an array not currently implemented");
+        //make sure we're matching named fields
+        if let Fields::Named(fieldsnamed) = ds.fields {
+            //foreach field  (https://dtolnay.github.io/syn/syn/struct.Field.html)
+            for field in fieldsnamed.named {
+                //fieldsnamed.named is of type Puncatuated<Field, Comma>
+                //field is type syn::Field. field.ident is Option<ident>, so we can print it,
+                //or save it for future use (like translating a struct :))                            
+                //println!("field: {}", field.ident.unwrap());
+                //now we can find the type of the field
+                //field.ty is Enum syn::Type (https://dtolnay.github.io/syn/syn/enum.Type.html)
+                match field.ty {
+                    //array
+                    Type::Array(array) => {
+                        //println!("{} is an array", field.ident.unwrap());
+                        //check the len type
+                        if let Some(len) = get_array_len(array.clone()) {
+                            //println!("length val is: {}", len);
+                            match *array.elem {
+                                //scaffold handling 2d arrays
+                                Type::Array(_a) => {
+                                    //todo: support 2d arrays
+                                    panic!("2+D Arrays not currently implemented")
                                 },
-                                Type::Ptr(_ptr) => {
-                                    //TODO: add a pointer to a file
-                                    panic!("double+ pointers not currently implemented");
+                                //an array of pointers
+                                //TODO: update to n-pointers later, right now only handle single pointers
+                                Type::Ptr(_p) => {
+                                    //todo: support array of pointers
+                                    panic!("Pointer Arrays not currently implemented")
                                 },
                                 Type::Path(p) => {
-                                    //println!("ptr name is {}", field.ident.unwrap());
-                                    //println!("ptr type is: {}", p.path.segments.iter().last().unwrap().ident);
-                                    add_pointer(&mut cppfile, LanguageType::CPP, field.ident.unwrap(), p.path.segments.iter().last().unwrap().ident);
-                                    add_pointer(&mut pyfile, LanguageType::Python, field.ident.unwrap(), p.path.segments.iter().last().unwrap().ident);
-                                    add_pointer(&mut csfile, LanguageType::CSharp, field.ident.unwrap(), p.path.segments.iter().last().unwrap().ident);
+                                    //println!("array name is {}", field.ident.unwrap());
+                                    //println!("array type is: {}", p.path.segments.iter().last().unwrap().ident);
+                                    add_array(&mut cppfile, LanguageType::CPP, 
+                                                field.ident.unwrap(), len,
+                                                p.path.segments.iter().last().unwrap().ident);
+                                    add_array(&mut csfile, LanguageType::CSharp, 
+                                                field.ident.unwrap(), len,
+                                                p.path.segments.iter().last().unwrap().ident);
+                                    add_array(&mut pyfile, LanguageType::Python, 
+                                                field.ident.unwrap(), len,
+                                                p.path.segments.iter().last().unwrap().ident);
                                 },
-                                _ => {
-                                    panic!("pointer type not implemented");
-                                }
-                            };
-                        },
-                        //aparently fields like u16, i32, etc. are paths to their type
-                        Type::Path(typepath)=> {
-                            //get the last Punctuated<PathSegment, Colon2> from 
-                            //typepath.path.segments
-                            let segment = typepath.path.segments.iter().last().unwrap();
-                            //println!("type is: {}", segment.ident);
-                            //println!("name is: {}", field.ident.unwrap());
-                            add_simple_type(&mut cppfile, LanguageType::CPP, field.ident.unwrap(), segment.ident);
-                            add_simple_type(&mut csfile, LanguageType::CSharp, field.ident.unwrap(), segment.ident);
-                            add_simple_type(&mut pyfile, LanguageType::Python, field.ident.unwrap(), segment.ident);
-                        },
-                                                        
-                        /* I'm not going to support these types yet */
-                        // =====
-                        // Type::Slice(_) => {println!("slice")},
-                        // Type::Reference(_) => {println!("reference")},
-                        // Type::BareFn(_) => {println!("barefn")},
-                        // Type::Never(_) => {println!("never")},
-                        // Type::Tuple(_TypeTuple)=> {println!("tuple")},                                
-                        // Type::TraitObject(_TypeTraitObject)=> {println!("trait obj")},
-                        // Type::ImplTrait(_TypeImplTrait)=> {println!("type impl trait")},
-                        // Type::Paren(_TypeParen)=> {println!("paren")},
-                        // Type::Group(_TypeGroup)=> {println!("group")},
-                        // Type::Infer(_TypeInfer)=> {println!("infer")},
-                        // Type::Macro(_TypeMacro)=> {println!("macro")},
-                        //Type::Verbatim(typeverbatim) => {println!("{} is a verbatim", field.ident.unwrap())},
-                        // =====
-                        
-                        //TODO: for unsupported types, throw a warning and don't translate the struct 
-                        _ => {println!("{} is an unsupported type", field.ident.unwrap())}
-                    }
+                                _ => {}
+                            }
+                        }
+                    },
+                    //pointer
+                    Type::Ptr(ptr) => {
+                        //println!("{} is a ptr", field.ident.unwrap());
+                        //get the type of the pointer
+                        match *ptr.elem {
+                            Type::Array(_array) => {
+                                //todo: support pointer to an array
+                                panic!("pointer to an array not currently implemented");
+                            },
+                            Type::Ptr(_ptr) => {
+                                //TODO: add a pointer to a file
+                                panic!("double+ pointers not currently implemented");
+                            },
+                            Type::Path(p) => {
+                                //println!("ptr name is {}", field.ident.unwrap());
+                                //println!("ptr type is: {}", p.path.segments.iter().last().unwrap().ident);
+                                add_pointer(&mut cppfile, LanguageType::CPP, field.ident.unwrap(), p.path.segments.iter().last().unwrap().ident);
+                                add_pointer(&mut pyfile, LanguageType::Python, field.ident.unwrap(), p.path.segments.iter().last().unwrap().ident);
+                                add_pointer(&mut csfile, LanguageType::CSharp, field.ident.unwrap(), p.path.segments.iter().last().unwrap().ident);
+                            },
+                            _ => {
+                                panic!("pointer type not implemented");
+                            }
+                        };
+                    },
+                    //aparently fields like u16, i32, etc. are paths to their type
+                    Type::Path(typepath)=> {
+                        //get the last Punctuated<PathSegment, Colon2> from 
+                        //typepath.path.segments
+                        let segment = typepath.path.segments.iter().last().unwrap();
+                        //println!("type is: {}", segment.ident);
+                        //println!("name is: {}", field.ident.unwrap());
+                        add_simple_type(&mut cppfile, LanguageType::CPP, field.ident.unwrap(), segment.ident);
+                        add_simple_type(&mut csfile, LanguageType::CSharp, field.ident.unwrap(), segment.ident);
+                        add_simple_type(&mut pyfile, LanguageType::Python, field.ident.unwrap(), segment.ident);
+                    },
+                                                    
+                    /* I'm not going to support these types yet */
+                    // =====
+                    // Type::Slice(_) => {println!("slice")},
+                    // Type::Reference(_) => {println!("reference")},
+                    // Type::BareFn(_) => {println!("barefn")},
+                    // Type::Never(_) => {println!("never")},
+                    // Type::Tuple(_TypeTuple)=> {println!("tuple")},                                
+                    // Type::TraitObject(_TypeTraitObject)=> {println!("trait obj")},
+                    // Type::ImplTrait(_TypeImplTrait)=> {println!("type impl trait")},
+                    // Type::Paren(_TypeParen)=> {println!("paren")},
+                    // Type::Group(_TypeGroup)=> {println!("group")},
+                    // Type::Infer(_TypeInfer)=> {println!("infer")},
+                    // Type::Macro(_TypeMacro)=> {println!("macro")},
+                    //Type::Verbatim(typeverbatim) => {println!("{} is a verbatim", field.ident.unwrap())},
+                    // =====
+                    
+                    //TODO: for unsupported types, throw a warning and don't translate the struct 
+                    _ => {println!("{} is an unsupported type", field.ident.unwrap())}
                 }
             }
-            //close the struct
-            close_struct(&mut *cppfile, LanguageType::CPP, ast.ident);
-            close_struct(&mut *pyfile, LanguageType::Python, ast.ident);
-            close_struct(&mut *csfile, LanguageType::CSharp, ast.ident);
         }
+        //close the struct
+        close_struct(&mut *cppfile, LanguageType::CPP, ast.ident);
+        close_struct(&mut *pyfile, LanguageType::Python, ast.ident);
+        close_struct(&mut *csfile, LanguageType::CSharp, ast.ident);
     }
     
     
