@@ -100,6 +100,10 @@ lazy_static! {
         v.push("Structure");
         Mutex::new(v)
     };
+    static ref PY_LINES: Mutex<Vec<String>> = {
+        let p = Vec::new();
+        Mutex::new(p)
+    };
 }
 
 pub enum LanguageType {
@@ -128,13 +132,17 @@ pub fn add_simple_type(file: &mut File, ltype: LanguageType, name: Ident, dtype:
         LanguageType::Python => {
             match PYMAP.get(&dtype.as_ref()) {
                 Some(t) => {
-                    write!(file, "        (\"{}\", {}),\n", name, t).unwrap();
+                    PY_LINES.lock().unwrap().push(format!("        (\"{}\", {}),\n", name, t));
+                    //write!(file, "        (\"{}\", {}),\n", name, t).unwrap();
                     let mut pyused = PY_USED_TYPES.lock().unwrap();
                     if !pyused.contains(t){
                         pyused.push(t);
                     }                    
                 },
-                None => write!(file, "        (\"{}\", {}),\n", name, dtype).unwrap()
+                None => {
+                    PY_LINES.lock().unwrap().push(format!("        (\"{}\", {}),\n", name, dtype));
+                    //write!(file, "        (\"{}\", {}),\n", name, dtype).unwrap()
+                }
             } 
         }
         LanguageType::CSharp => {
@@ -161,13 +169,17 @@ pub fn add_array(file: &mut File, ltype: LanguageType, name: Ident, length: u64,
         LanguageType::Python => {
             match PYMAP.get(&dtype.as_ref()) {
                 Some(t) => {
-                    write!(file, "        (\"{}\", {} * {}),\n", name, t, length).unwrap();
+                    PY_LINES.lock().unwrap().push(format!("        (\"{}\", {} * {}),\n", name, t, length));
+                    //write!(file, "        (\"{}\", {} * {}),\n", name, t, length).unwrap();
                     let mut pyused = PY_USED_TYPES.lock().unwrap();
                     if !pyused.contains(t){
                         pyused.push(t);
                     }  
                 },
-                None => write!(file, "        (\"{}\", {} * {}),\n", name, dtype, length).unwrap()
+                None => {
+                    PY_LINES.lock().unwrap().push(format!("        (\"{}\", {} * {}),\n", name, dtype, length));
+                    //write!(file, "        (\"{}\", {} * {}),\n", name, dtype, length).unwrap()
+                }
             } 
         }
         LanguageType::CSharp => {
@@ -212,17 +224,20 @@ pub fn add_pointer(file: &mut File, ltype: LanguageType, name: Ident, dtype: Ide
             match PYMAP.get(&dtype_lookup_val.as_ref()) {
                 Some(t) => {
                     if dtype_lookup_val != "c_char_pntr" && dtype_lookup_val != "c_void" {
-                        write!(file, "        (\"{}\", POINTER({})),\n", name, t).unwrap();
+                        //write!(file, "        (\"{}\", POINTER({})),\n", name, t).unwrap();
+                        PY_LINES.lock().unwrap().push(format!("        (\"{}\", POINTER({})),\n", name, t));
                         usedpntr = true;
                     } else {
-                        write!(file, "        (\"{}\", {}),\n", name, t).unwrap();
+                        //write!(file, "        (\"{}\", {}),\n", name, t).unwrap();
+                        PY_LINES.lock().unwrap().push(format!("        (\"{}\", {}),\n", name, t));
                     }
                     if !pyused.contains(t){
                         pyused.push(t);
                     }                    
                 },
                 None => {
-                    write!(file, "        (\"{}\", POINTER({})),\n", name, dtype).unwrap();
+                    //write!(file, "        (\"{}\", POINTER({})),\n", name, dtype).unwrap();
+                    PY_LINES.lock().unwrap().push(format!("        (\"{}\", POINTER({})),\n", name, dtype));
                     usedpntr = true;
                 }
             }
@@ -268,8 +283,10 @@ pub fn start_struct(file: &mut File, ltype: LanguageType, structname: Ident) {
             write!(file, "\t[StructLayout(LayoutKind.Sequential)]\n\tpublic struct {}\n\t{{\n", structname).unwrap();
         },
         LanguageType::Python => {
-            write!(file, "class {}(Structure):\n", structname).unwrap();
-            write!(file, "    _fields_ = [\n").unwrap();
+            //write!(file, "class {}(Structure):\n", structname).unwrap();
+            //write!(file, "    _fields_ = [\n").unwrap();
+            PY_LINES.lock().unwrap().push(format!("class {}(Structure):\n", structname));
+            PY_LINES.lock().unwrap().push(format!("    _fields_ = [\n"));
         }
     }
 }
@@ -284,7 +301,8 @@ pub fn close_struct(file: &mut File, ltype: LanguageType, structname: Ident) {
             write!(file, "\t}}\n\n").unwrap();
         },
         LanguageType::Python => {
-            write!(file, "        ]\n\n").unwrap();
+            //write!(file, "        ]\n\n").unwrap();
+            PY_LINES.lock().unwrap().push(format!("        ]\n\n"));
         }
     }
 }
@@ -306,7 +324,11 @@ pub fn close_file(file: &mut File, ltype: LanguageType) {
             }
             //remove the last comma
             ctypestring.pop();
-            write!(file, "{}\n", ctypestring).unwrap();
+            write!(file, "{}\n\n", ctypestring).unwrap();
+            //write all of the lines in PY_LINES
+            for line in PY_LINES.lock().unwrap().iter() {
+                write!(file, "{}", line).unwrap();
+            }
         }
     }
 }
