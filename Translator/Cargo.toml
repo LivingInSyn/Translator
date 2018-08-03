@@ -1,6 +1,6 @@
 [package]
 name = "translator"
-version = "0.2.1"
+version = "0.3.0"
 authors = ["Jeremy Mill <jeremymill@gmail.com>"]
 description = "A procedural macro which translates your repr-C structs into C++, Python and C# at compile time for helping write FFI libraries"
 license = "MIT"
