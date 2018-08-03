@@ -4,7 +4,7 @@ version = "0.3.0"
 authors = ["Jeremy Mill <jeremymill@gmail.com>"]
 description = "A procedural macro which translates your repr-C structs into C++, Python and C# at compile time for helping write FFI libraries"
 license = "MIT"
-readme = "..\\README.md"
+readme = "../README.md"
 keywords = ["FFI", "struct", "translator", "translate"]
 repository = "https://github.com/LivingInSyn/Translator"
 
