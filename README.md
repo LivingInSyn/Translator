@@ -100,3 +100,4 @@ public struct Baz
 }
 ```
 
+<a rel="me" href="https://infosec.exchange/@livinginsyn">Mastodon</a>
